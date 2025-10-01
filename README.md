@@ -188,6 +188,8 @@ _, decision = ta.propagate("NVDA", "2024-05-10")
 print(decision)
 ```
 
+The default configuration now prioritizes long-term investment research. Key look-back windows (news, sentiment, technical indicators, and insider activity) have been extended to capture multi-month and multi-year trends. You can tailor these horizons via the new configuration keys such as `global_news_look_back_days`, `company_news_look_back_days`, `social_sentiment_look_back_days`, `technical_indicator_look_back_days`, and `insider_activity_look_back_days` to suit your preferred holding period.
+
 > For `online_tools`, we recommend enabling them for experimentation, as they provide access to real-time data. The agents' offline tools rely on cached data from our **Tauric TradingDB**, a curated dataset we use for backtesting. We're currently in the process of refining this dataset, and we plan to release it soon alongside our upcoming projects. Stay tuned!
 
 You can view the full list of configurations in `tradingagents/default_config.py`.

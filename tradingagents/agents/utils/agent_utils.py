@@ -54,14 +54,19 @@ class Toolkit:
         curr_date: Annotated[str, "Date you want to get news for in yyyy-mm-dd format"],
     ) -> str:
         """
-        Retrieve global news from Reddit within a specified time frame.
+        Retrieve global news from Reddit within a configurable multi-month time frame.
         Args:
             curr_date (str): Date you want to get news for in yyyy-mm-dd format
         Returns:
-            str: A formatted dataframe containing the latest global news from Reddit in the specified time frame.
+            str: A formatted dataframe containing the most relevant global news from Reddit in the configured look-back window.
         """
         
-        global_news_result = interface.get_reddit_global_news(curr_date, 7, 5)
+        look_back_days = Toolkit._config.get("global_news_look_back_days", 7)
+        daily_limit = Toolkit._config.get("reddit_news_daily_limit", 5)
+
+        global_news_result = interface.get_reddit_global_news(
+            curr_date, look_back_days, daily_limit
+        )
 
         return global_news_result
 
@@ -107,15 +112,20 @@ class Toolkit:
         curr_date: Annotated[str, "Current date you want to get news for"],
     ) -> str:
         """
-        Retrieve the latest news about a given stock from Reddit, given the current date.
+        Retrieve company-focused Reddit discussions within a configurable multi-month horizon.
         Args:
             ticker (str): Ticker of a company. e.g. AAPL, TSM
-            curr_date (str): current date in yyyy-mm-dd format to get news for
+            curr_date (str): current date in yyyy-mm-dd format to anchor the look-back window
         Returns:
-            str: A formatted dataframe containing the latest news about the company on the given date
+            str: A formatted dataframe containing the most relevant company posts in the configured look-back window
         """
 
-        stock_news_results = interface.get_reddit_company_news(ticker, curr_date, 7, 5)
+        look_back_days = Toolkit._config.get("social_sentiment_look_back_days", 7)
+        daily_limit = Toolkit._config.get("reddit_news_daily_limit", 5)
+
+        stock_news_results = interface.get_reddit_company_news(
+            ticker, curr_date, look_back_days, daily_limit
+        )
 
         return stock_news_results
 
@@ -179,10 +189,19 @@ class Toolkit:
             symbol (str): Ticker symbol of the company, e.g. AAPL, TSM
             indicator (str): Technical indicator to get the analysis and report of
             curr_date (str): The current trading date you are trading on, YYYY-mm-dd
-            look_back_days (int): How many days to look back, default is 30
+            look_back_days (int): How many days to look back. When left at the default (30),
+                the value will be overridden by the configured long-term window.
         Returns:
             str: A formatted dataframe containing the stock stats indicators for the specified ticker symbol and indicator.
         """
+
+        default_look_back = 30
+        configured_look_back = Toolkit._config.get(
+            "technical_indicator_look_back_days", default_look_back
+        )
+
+        if look_back_days == default_look_back:
+            look_back_days = configured_look_back
 
         result_stockstats = interface.get_stock_stats_indicators_window(
             symbol, indicator, curr_date, look_back_days, False
@@ -203,15 +222,24 @@ class Toolkit:
         look_back_days: Annotated[int, "how many days to look back"] = 30,
     ) -> str:
         """
-        Retrieve stock stats indicators for a given ticker symbol and indicator.
+        Retrieve stock stats indicators for a given ticker symbol and indicator using the online data pipeline.
         Args:
             symbol (str): Ticker symbol of the company, e.g. AAPL, TSM
             indicator (str): Technical indicator to get the analysis and report of
             curr_date (str): The current trading date you are trading on, YYYY-mm-dd
-            look_back_days (int): How many days to look back, default is 30
+            look_back_days (int): How many days to look back. When left at the default (30),
+                the value will be overridden by the configured long-term window.
         Returns:
             str: A formatted dataframe containing the stock stats indicators for the specified ticker symbol and indicator.
         """
+
+        default_look_back = 30
+        configured_look_back = Toolkit._config.get(
+            "technical_indicator_look_back_days", default_look_back
+        )
+
+        if look_back_days == default_look_back:
+            look_back_days = configured_look_back
 
         result_stockstats = interface.get_stock_stats_indicators_window(
             symbol, indicator, curr_date, look_back_days, True
@@ -229,16 +257,19 @@ class Toolkit:
         ],
     ):
         """
-        Retrieve insider sentiment information about a company (retrieved from public SEC information) for the past 30 days
+        Retrieve insider sentiment information about a company (retrieved from public SEC information)
+        over the configured long-term look-back window.
         Args:
             ticker (str): ticker symbol of the company
             curr_date (str): current date you are trading at, yyyy-mm-dd
         Returns:
-            str: a report of the sentiment in the past 30 days starting at curr_date
+            str: a report of the insider sentiment over the configured look-back window starting at curr_date
         """
 
+        look_back_days = Toolkit._config.get("insider_activity_look_back_days", 30)
+
         data_sentiment = interface.get_finnhub_company_insider_sentiment(
-            ticker, curr_date, 30
+            ticker, curr_date, look_back_days
         )
 
         return data_sentiment
@@ -253,16 +284,19 @@ class Toolkit:
         ],
     ):
         """
-        Retrieve insider transaction information about a company (retrieved from public SEC information) for the past 30 days
+        Retrieve insider transaction information about a company (retrieved from public SEC information)
+        over the configured long-term look-back window.
         Args:
             ticker (str): ticker symbol of the company
             curr_date (str): current date you are trading at, yyyy-mm-dd
         Returns:
-            str: a report of the company's insider transactions/trading information in the past 30 days
+            str: a report of the company's insider transactions/trading information over the configured look-back window
         """
 
+        look_back_days = Toolkit._config.get("insider_activity_look_back_days", 30)
+
         data_trans = interface.get_finnhub_company_insider_transactions(
-            ticker, curr_date, 30
+            ticker, curr_date, look_back_days
         )
 
         return data_trans
@@ -348,16 +382,19 @@ class Toolkit:
         curr_date: Annotated[str, "Curr date in yyyy-mm-dd format"],
     ):
         """
-        Retrieve the latest news from Google News based on a query and date range.
+        Retrieve the latest news from Google News based on a query and a configurable historical window.
         Args:
             query (str): Query to search with
             curr_date (str): Current date in yyyy-mm-dd format
-            look_back_days (int): How many days to look back
         Returns:
-            str: A formatted string containing the latest news from Google News based on the query and date range.
+            str: A formatted string containing the latest news from Google News based on the query and configured date range.
         """
 
-        google_news_results = interface.get_google_news(query, curr_date, 7)
+        look_back_days = Toolkit._config.get("company_news_look_back_days", 7)
+
+        google_news_results = interface.get_google_news(
+            query, curr_date, look_back_days
+        )
 
         return google_news_results
 
