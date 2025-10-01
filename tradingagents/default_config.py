@@ -20,4 +20,11 @@ DEFAULT_CONFIG = {
     "max_recur_limit": 100,
     # Tool settings
     "online_tools": True,
+    # Look-back windows tailored for long-term investing workflows
+    "global_news_look_back_days": 120,
+    "company_news_look_back_days": 180,
+    "reddit_news_daily_limit": 20,
+    "social_sentiment_look_back_days": 120,
+    "technical_indicator_look_back_days": 365,
+    "insider_activity_look_back_days": 365,
 }
