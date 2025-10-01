@@ -11,6 +11,7 @@ def create_trader(llm, memory):
         sentiment_report = state["sentiment_report"]
         news_report = state["news_report"]
         fundamentals_report = state["fundamentals_report"]
+        user_positions = state.get("user_portfolio", [])
 
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
@@ -22,15 +23,29 @@ def create_trader(llm, memory):
         else:
             past_memory_str = "No past memories found."
 
+        if user_positions:
+            portfolio_summary = "\n".join(
+                f"- Compra realizada el {pos['fecha_de_compra']} a {pos['precio_de_compra']}"
+                for pos in user_positions
+            )
+            portfolio_summary = (
+                "Historial reciente de operaciones del usuario para este activo:\n"
+                f"{portfolio_summary}"
+            )
+        else:
+            portfolio_summary = (
+                "El usuario no tiene compras registradas para este activo."
+            )
+
         context = {
             "role": "user",
-            "content": f"Based on a comprehensive analysis by a team of analysts, here is an investment plan tailored for {company_name}. This plan incorporates insights from current technical market trends, macroeconomic indicators, and social media sentiment. Use this plan as a foundation for evaluating your next trading decision.\n\nProposed Investment Plan: {investment_plan}\n\nLeverage these insights to make an informed and strategic decision.",
+            "content": f"Based on a comprehensive analysis by a team of analysts, here is an investment plan tailored for {company_name}. This plan incorporates insights from current technical market trends, macroeconomic indicators, and social media sentiment. Use this plan as a foundation for evaluating your next trading decision.\n\nProposed Investment Plan: {investment_plan}\n\n{portfolio_summary}\n\nLeverage these insights to make an informed and strategic decision.",
         }
 
         messages = [
             {
                 "role": "system",
-                "content": f"""You are a trading agent analyzing market data to make investment decisions. Based on your analysis, provide a specific recommendation to buy, sell, or hold. End with a firm decision and always conclude your response with 'FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**' to confirm your recommendation. Do not forget to utilize lessons from past decisions to learn from your mistakes. Here is some reflections from similar situatiosn you traded in and the lessons learned: {past_memory_str}""",
+                "content": f"""You are a trading agent analyzing market data to make investment decisions. Based on your analysis, provide a specific recommendation to buy, sell, or hold. End with a firm decision and always conclude your response with 'FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**' to confirm your recommendation. Incorporate the user's existing position and purchase price context when weighing risk and reward, and avoid defaulting to Hold unless it is the most compelling option. Do not forget to utilize lessons from past decisions to learn from your mistakes. Here is some reflections from similar situatiosn you traded in and the lessons learned: {past_memory_str}""",
             },
             context,
         ]

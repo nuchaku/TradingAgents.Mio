@@ -6,6 +6,9 @@ import json
 from datetime import date
 from typing import Dict, Any, Tuple, List, Optional
 
+import pandas as pd
+from pandas.errors import EmptyDataError
+
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -50,6 +53,9 @@ class TradingAgentsGraph:
 
         # Update the interface's config
         set_config(self.config)
+
+        # Load optional user portfolio data
+        self.user_portfolio = self._load_user_portfolio()
 
         # Create necessary directories
         os.makedirs(
@@ -160,8 +166,10 @@ class TradingAgentsGraph:
         self.ticker = company_name
 
         # Initialize state
+        portfolio_context = self.user_portfolio.get(company_name.upper(), [])
+
         init_agent_state = self.propagator.create_initial_state(
-            company_name, trade_date
+            company_name, trade_date, user_portfolio=portfolio_context
         )
         args = self.propagator.get_graph_args()
 
@@ -219,6 +227,7 @@ class TradingAgentsGraph:
             },
             "investment_plan": final_state["investment_plan"],
             "final_trade_decision": final_state["final_trade_decision"],
+            "user_portfolio": final_state.get("user_portfolio", []),
         }
 
         # Save to file
@@ -230,6 +239,59 @@ class TradingAgentsGraph:
             "w",
         ) as f:
             json.dump(self.log_states_dict, f, indent=4)
+
+    def _load_user_portfolio(self) -> Dict[str, List[Dict[str, str]]]:
+        """Load user-specific portfolio data from a CSV file if provided."""
+
+        csv_path = self.config.get("user_portfolio_csv")
+        if not csv_path:
+            return {}
+
+        resolved_path = Path(csv_path).expanduser()
+        if not resolved_path.exists():
+            if self.debug:
+                print(f"[TradingAgentsGraph] User portfolio CSV not found at {resolved_path}.")
+            return {}
+
+        try:
+            portfolio_df = pd.read_csv(resolved_path)
+        except (FileNotFoundError, EmptyDataError):
+            if self.debug:
+                print(
+                    f"[TradingAgentsGraph] Unable to load user portfolio CSV at {resolved_path}."
+                )
+            return {}
+
+        normalized_columns = {col.lower().strip(): col for col in portfolio_df.columns}
+
+        try:
+            date_col = normalized_columns["fecha de compra"]
+            ticker_col = normalized_columns["ticker"]
+            price_col = normalized_columns["precio de compra"]
+        except KeyError:
+            if self.debug:
+                print(
+                    "[TradingAgentsGraph] User portfolio CSV must contain columns: "
+                    "'fecha de compra', 'ticker', 'precio de compra'."
+                )
+            return {}
+
+        formatted_portfolio: Dict[str, List[Dict[str, str]]] = {}
+
+        for _, row in portfolio_df.iterrows():
+            ticker = str(row[ticker_col]).upper().strip()
+            if not ticker or ticker == "nan":
+                continue
+
+            formatted_portfolio.setdefault(ticker, []).append(
+                {
+                    "fecha_de_compra": str(row[date_col]),
+                    "ticker": ticker,
+                    "precio_de_compra": str(row[price_col]),
+                }
+            )
+
+        return formatted_portfolio
 
     def reflect_and_remember(self, returns_losses):
         """Reflect on decisions and update memory based on returns."""

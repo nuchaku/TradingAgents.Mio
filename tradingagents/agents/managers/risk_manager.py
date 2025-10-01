@@ -14,6 +14,21 @@ def create_risk_manager(llm, memory):
         fundamentals_report = state["news_report"]
         sentiment_report = state["sentiment_report"]
         trader_plan = state["investment_plan"]
+        user_positions = state.get("user_portfolio", [])
+
+        if user_positions:
+            portfolio_context = "\n".join(
+                f"- Compra del {pos['fecha_de_compra']} a {pos['precio_de_compra']}"
+                for pos in user_positions
+            )
+            portfolio_context = (
+                "Contexto de posiciones del usuario en este activo:\n"
+                f"{portfolio_context}"
+            )
+        else:
+            portfolio_context = (
+                "El usuario no reporta posiciones activas en este activo."
+            )
 
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
@@ -29,6 +44,7 @@ Guidelines for Decision-Making:
 2. **Provide Rationale**: Support your recommendation with direct quotes and counterarguments from the debate.
 3. **Refine the Trader's Plan**: Start with the trader's original plan, **{trader_plan}**, and adjust it based on the analysts' insights.
 4. **Learn from Past Mistakes**: Use lessons from **{past_memory_str}** to address prior misjudgments and improve the decision you are making now to make sure you don't make a wrong BUY/SELL/HOLD call that loses money.
+5. **Incorporate User Exposure**: Factor in the user's existing trades when calibrating risk, keeping {portfolio_context} in mind.
 
 Deliverables:
 - A clear and actionable recommendation: Buy, Sell, or Hold.
@@ -36,7 +52,12 @@ Deliverables:
 
 ---
 
-**Analysts Debate History:**  
+User position snapshot:
+{portfolio_context}
+
+---
+
+**Analysts Debate History:**
 {history}
 
 ---

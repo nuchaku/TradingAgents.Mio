@@ -8,6 +8,7 @@ DEFAULT_CONFIG = {
         os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
         "dataflows/data_cache",
     ),
+    "user_portfolio_csv": os.getenv("TRADINGAGENTS_USER_PORTFOLIO", None),
     # LLM settings
     "llm_provider": "openai",
     "deep_think_llm": "o4-mini",
